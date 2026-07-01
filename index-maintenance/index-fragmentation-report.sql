@@ -1,66 +1,67 @@
 /*
-    Index Fragmentation Report
-    --------------------------
-    Identifies fragmented indexes and recommends action.
-    
-    General guidelines:
-    - 5-30% fragmentation → REORGANIZE
-    - >30% fragmentation → REBUILD
-    - <5% → leave it alone
-    - Only look at indexes with 1000+ pages (small indexes don't benefit)
-    
+    Script: index-fragmentation-report.sql
+    Purpose: Identify fragmented indexes and generate reviewable maintenance commands.
     Compatible: SQL Server 2016+
-    Impact: Can be CPU-intensive on large databases. 
-            Use LIMITED mode (default) for quick checks.
-            Use DETAILED mode for accurate page-level stats.
-    
-    ⚠️ This is a REPORT ONLY. It does not modify anything.
+    Requires: VIEW DATABASE STATE in target database
+    Impact: Read-only; physical stats can be CPU/IO intensive on large databases
+    Scope: Database
+    Safety: GeneratesCommandsOnly
 */
 
--- ============================================
--- Parameters
--- ============================================
-DECLARE @DatabaseName NVARCHAR(128) = NULL;  -- NULL = current database
-DECLARE @MinPageCount INT = 1000;            -- Skip small indexes
-DECLARE @MinFragPct DECIMAL(5,2) = 5.0;     -- Only show indexes above this threshold
-DECLARE @ScanMode NVARCHAR(20) = 'LIMITED';  -- LIMITED (fast) or DETAILED (thorough)
+DECLARE @DatabaseName SYSNAME = NULL;       -- NULL = current database
+DECLARE @MinPageCount INT = 1000;
+DECLARE @MinFragPct DECIMAL(5,2) = 5.0;
+DECLARE @ScanMode NVARCHAR(20) = 'LIMITED'; -- LIMITED, SAMPLED, DETAILED
+DECLARE @UseOnlineRebuild BIT = 0;          -- ONLINE = ON can fail by edition/index type; opt in only
+DECLARE @SortInTempdb BIT = 0;
+DECLARE @MaxDop INT = NULL;
 
--- ============================================
--- Fragmentation Report
--- ============================================
-SELECT 
-    DB_NAME() AS [Database],
-    OBJECT_SCHEMA_NAME(ips.object_id) AS [Schema],
-    OBJECT_NAME(ips.object_id) AS [Table],
+;WITH Frag AS (
+    SELECT
+        ips.object_id,
+        ips.index_id,
+        ips.avg_fragmentation_in_percent,
+        ips.page_count,
+        ips.record_count,
+        ips.alloc_unit_type_desc
+    FROM sys.dm_db_index_physical_stats(DB_ID(@DatabaseName), NULL, NULL, NULL, @ScanMode) AS ips
+    WHERE ips.avg_fragmentation_in_percent >= @MinFragPct
+      AND ips.page_count >= @MinPageCount
+      AND ips.alloc_unit_type_desc = 'IN_ROW_DATA'
+)
+SELECT
+    DB_NAME(COALESCE(DB_ID(@DatabaseName), DB_ID())) AS [Database],
+    OBJECT_SCHEMA_NAME(f.object_id) AS [Schema],
+    OBJECT_NAME(f.object_id) AS [Table],
     i.name AS [Index],
     i.type_desc AS [IndexType],
-    CAST(ips.avg_fragmentation_in_percent AS DECIMAL(5,2)) AS [FragPct],
-    ips.page_count AS [Pages],
-    CAST(ips.page_count * 8.0 / 1024 AS DECIMAL(10,2)) AS [SizeMB],
-    ips.record_count AS [Rows],
-    
-    -- Recommendation
-    CASE 
-        WHEN ips.avg_fragmentation_in_percent < 5 THEN 'OK'
-        WHEN ips.avg_fragmentation_in_percent BETWEEN 5 AND 30 THEN 'REORGANIZE'
-        WHEN ips.avg_fragmentation_in_percent > 30 THEN 'REBUILD'
+    CAST(f.avg_fragmentation_in_percent AS DECIMAL(5,2)) AS [FragPct],
+    f.page_count AS [Pages],
+    CAST(f.page_count * 8.0 / 1024 AS DECIMAL(18,2)) AS [SizeMB],
+    f.record_count AS [Rows],
+    CASE
+        WHEN f.avg_fragmentation_in_percent < 5 THEN 'OK'
+        WHEN f.avg_fragmentation_in_percent BETWEEN 5 AND 30 THEN 'REORGANIZE'
+        WHEN f.avg_fragmentation_in_percent > 30 THEN 'REBUILD'
     END AS [Action],
-    
-    -- Generated command (copy and run if needed)
-    CASE 
-        WHEN ips.avg_fragmentation_in_percent BETWEEN 5 AND 30 
-            THEN 'ALTER INDEX [' + i.name + '] ON [' + OBJECT_SCHEMA_NAME(ips.object_id) + '].[' + OBJECT_NAME(ips.object_id) + '] REORGANIZE;'
-        WHEN ips.avg_fragmentation_in_percent > 30 
-            THEN 'ALTER INDEX [' + i.name + '] ON [' + OBJECT_SCHEMA_NAME(ips.object_id) + '].[' + OBJECT_NAME(ips.object_id) + '] REBUILD WITH (ONLINE = ON);'
-        ELSE ''
+    CASE
+        WHEN f.avg_fragmentation_in_percent BETWEEN 5 AND 30 THEN
+            N'ALTER INDEX ' + QUOTENAME(i.name) + N' ON ' + QUOTENAME(OBJECT_SCHEMA_NAME(f.object_id)) + N'.' + QUOTENAME(OBJECT_NAME(f.object_id)) + N' REORGANIZE;'
+        WHEN f.avg_fragmentation_in_percent > 30 THEN
+            N'ALTER INDEX ' + QUOTENAME(i.name) + N' ON ' + QUOTENAME(OBJECT_SCHEMA_NAME(f.object_id)) + N'.' + QUOTENAME(OBJECT_NAME(f.object_id)) + N' REBUILD' +
+            CASE
+                WHEN @UseOnlineRebuild = 1 OR @SortInTempdb = 1 OR @MaxDop IS NOT NULL THEN N' WITH (' +
+                    STUFF(
+                        CASE WHEN @UseOnlineRebuild = 1 THEN N', ONLINE = ON' ELSE N'' END +
+                        CASE WHEN @SortInTempdb = 1 THEN N', SORT_IN_TEMPDB = ON' ELSE N'' END +
+                        CASE WHEN @MaxDop IS NOT NULL THEN N', MAXDOP = ' + CONVERT(NVARCHAR(10), @MaxDop) ELSE N'' END,
+                        1, 2, N''
+                    ) + N')'
+                ELSE N''
+            END + N';'
+        ELSE N''
     END AS [Command]
-
-FROM sys.dm_db_index_physical_stats(
-    DB_ID(@DatabaseName), NULL, NULL, NULL, @ScanMode
-) ips
-JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
-WHERE ips.avg_fragmentation_in_percent >= @MinFragPct
-  AND ips.page_count >= @MinPageCount
-  AND i.name IS NOT NULL  -- skip heaps
-  AND ips.alloc_unit_type_desc = 'IN_ROW_DATA'
-ORDER BY ips.avg_fragmentation_in_percent DESC;
+FROM Frag AS f
+JOIN sys.indexes AS i ON f.object_id = i.object_id AND f.index_id = i.index_id
+WHERE i.name IS NOT NULL
+ORDER BY f.avg_fragmentation_in_percent DESC;

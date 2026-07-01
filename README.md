@@ -1,49 +1,92 @@
 # 🛠️ DBA Toolbox
 
-A collection of reusable PowerShell and T-SQL scripts for SQL Server database administration. Built from years of experience across multiple environments — these are the scripts I reach for on day one at any new gig.
+A practical collection of reusable T-SQL and PowerShell tooling for SQL Server database administration. The repo is organized as an operational DBA assessment toolkit: read-only checks first, generated commands second, and dry-run defaults for anything that can change an instance.
+
+## Quick Start
+
+```sql
+-- In SSMS/sqlcmd, run the scripts that match the task.
+-- Review parameters at the top of each script before running.
+:r health-checks/server-health-check.sql
+:r backup-restore/backup-status-report.sql
+:r monitoring/agent-job-status.sql
+```
+
+PowerShell assessment wrapper:
+
+```powershell
+Install-Module SqlServer -Scope CurrentUser
+./powershell/Invoke-DbaToolboxAssessment.ps1 -SqlInstance 'MyServer' -WhatIf
+./powershell/Invoke-DbaToolboxAssessment.ps1 -SqlInstance 'MyServer'
+```
 
 ## Structure
 
 | Folder | Description |
 |--------|-------------|
-| `health-checks/` | Server health assessments, disk space, backup status, database state |
-| `index-maintenance/` | Index rebuild/reorg, fragmentation analysis, statistics updates |
-| `performance/` | Wait stats, blocking analysis, query plan review, expensive queries |
-| `security/` | Login audits, permission reports, orphaned users, vulnerability scans |
-| `backup-restore/` | Backup scripts, restore testing, backup history reports |
-| `monitoring/` | Agent job monitoring, alerting, error log parsing |
-| `migration/` | Schema comparison helpers, data migration utilities, pre/post checks |
-| `templates/` | Starter templates for common DBA tasks |
+| `health-checks/` | Server/database health, disk space, tempdb, database options |
+| `index-maintenance/` | Fragmentation analysis and reviewable maintenance command generation |
+| `performance/` | Wait stats, blocking analysis, plan cache, Query Store reviews |
+| `security/` | Login audits, permission reports, orphaned users |
+| `backup-restore/` | Backup health and restore-readiness reporting |
+| `monitoring/` | SQL Agent job status, scheduling, and failure visibility |
+| `migration/` | Placeholder for migration pre/post checks and schema/data validation |
+| `templates/` | Safe starter templates for common DBA tasks |
+| `powershell/` | PowerShell wrappers for repeatable operational workflows |
+| `runbooks/` | Operator-facing procedures that tie scripts together |
+| `docs/` | Script catalog and usage notes |
 
-## Usage
+## Script Catalog
 
-Most scripts are designed to run against any SQL Server 2016+ instance. Some PowerShell scripts use the `SqlServer` module.
+See `docs/script-catalog.md` for a full inventory with purpose, scope, and safety level.
 
-### Prerequisites
+## Safety Conventions
 
-- SQL Server 2016+ (most scripts)
-- PowerShell 5.1+ or PowerShell 7+
-- `SqlServer` PowerShell module (for PS scripts): `Install-Module SqlServer`
+Every SQL script should declare:
 
-### Quick Start
+- `Script`
+- `Purpose`
+- `Compatible`
+- `Requires`
+- `Impact`
+- `Scope`
+- `Safety`
 
-```sql
--- Run any T-SQL script against your target instance
--- Most scripts use dynamic SQL and work across databases
--- Review and adjust parameters at the top of each script before running
+Safety levels:
+
+- `ReadOnly` — queries DMVs/catalog/history tables only.
+- `GeneratesCommandsOnly` — produces statements for review; does not execute them.
+- `DryRunDefault` — prints planned changes unless an explicit execute flag is changed.
+
+## Prerequisites
+
+- SQL Server 2016+ for most scripts.
+- `security/permission-audit.sql` requires SQL Server 2017+ because it uses `STRING_AGG`.
+- PowerShell 5.1+ or PowerShell 7+ for PowerShell wrappers.
+- `SqlServer` PowerShell module for `powershell/Invoke-DbaToolboxAssessment.ps1`.
+
+## Validation
+
+This repo intentionally includes dependency-light validation:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 scripts/validate_repo.py
 ```
 
-## Script Conventions
+GitHub Actions runs the same checks on push and pull requests.
 
-- **Parameters at the top** — every script has configurable variables in the first section
-- **Non-destructive by default** — scripts that modify anything have a `@DryRun` flag
-- **Comments explain the "why"** — not just what, but why you'd use it
-- **Tested on** — each script notes compatible SQL Server versions
+## Runbooks
+
+Start with:
+
+- `runbooks/day-one-instance-review.md`
+- `runbooks/blocking-incident-response.md`
 
 ## Contributing
 
-This is a personal toolbox, but if you find it useful and want to suggest improvements, feel free to open an issue.
+This is a personal DBA toolbox, but issues and suggestions are welcome. Scripts should be safe by default, clearly documented, and reusable across SQL Server environments.
 
 ## License
 
-MIT — use these however you want. If they save you time, that's the whole point.
+MIT — see `LICENSE`.

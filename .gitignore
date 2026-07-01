@@ -1,0 +1,30 @@
+# Local/editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets and environment-local config
+.env
+*.secret.*
+secrets.json
+
+# Generated reports/exports
+reports/
+output/
+exports/
+*.csv
+*.json
+*.xlsx
+*.log
+
+# PowerShell artifacts
+*.ps1xml
+*.clixml
+
+# Python validation cache
+__pycache__/
+.pytest_cache/
+.venv/
+venv/

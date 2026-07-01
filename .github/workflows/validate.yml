@@ -1,0 +1,20 @@
+name: Validate DBA Toolbox
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Repository convention tests
+        run: python -m unittest discover -s tests -v
+      - name: Repository validation script
+        run: python scripts/validate_repo.py

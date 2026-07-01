@@ -1,11 +1,11 @@
 /*
-    Blocking Check
-    --------------
-    Find current blocking chains and what's causing them.
-    Run this when users complain about slowness or timeouts.
-    
+    Script: blocking-check.sql
+    Purpose: Find current blocking chains, blocked statements, and head blockers.
     Compatible: SQL Server 2016+
-    Impact: Read-only, safe to run in production
+    Requires: VIEW SERVER STATE
+    Impact: Read-only
+    Scope: Instance
+    Safety: ReadOnly
 */
 
 -- ============================================

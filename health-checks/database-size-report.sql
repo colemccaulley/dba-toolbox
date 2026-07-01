@@ -1,49 +1,33 @@
 /*
-    Database Size Report
-    --------------------
-    Shows size, space used, and growth trends for all databases.
-    
+    Script: database-size-report.sql
+    Purpose: Shows database data/log size, file counts, and autogrowth settings.
     Compatible: SQL Server 2016+
-    Impact: Read-only, safe to run in production
+    Requires: VIEW ANY DATABASE; public can see databases it can access
+    Impact: Read-only
+    Scope: Instance
+    Safety: ReadOnly
 */
 
-SELECT 
+SELECT
     d.name AS [Database],
     d.state_desc AS [State],
     d.recovery_model_desc AS [RecoveryModel],
-    
-    -- Data file size
-    CAST(SUM(CASE WHEN mf.type = 0 THEN mf.size END) * 8.0 / 1024 AS DECIMAL(12,2)) AS [DataSizeMB],
-    
-    -- Log file size
-    CAST(SUM(CASE WHEN mf.type = 1 THEN mf.size END) * 8.0 / 1024 AS DECIMAL(12,2)) AS [LogSizeMB],
-    
-    -- Total size
-    CAST(SUM(mf.size) * 8.0 / 1024 AS DECIMAL(12,2)) AS [TotalSizeMB],
-    CAST(SUM(mf.size) * 8.0 / 1024 / 1024 AS DECIMAL(12,2)) AS [TotalSizeGB],
-    
-    -- File counts
+    CAST(SUM(CASE WHEN mf.type = 0 THEN mf.size ELSE 0 END) * 8.0 / 1024 AS DECIMAL(18,2)) AS [DataSizeMB],
+    CAST(SUM(CASE WHEN mf.type = 1 THEN mf.size ELSE 0 END) * 8.0 / 1024 AS DECIMAL(18,2)) AS [LogSizeMB],
+    CAST(SUM(mf.size) * 8.0 / 1024 AS DECIMAL(18,2)) AS [TotalSizeMB],
+    CAST(SUM(mf.size) * 8.0 / 1024 / 1024 AS DECIMAL(18,2)) AS [TotalSizeGB],
     SUM(CASE WHEN mf.type = 0 THEN 1 ELSE 0 END) AS [DataFiles],
     SUM(CASE WHEN mf.type = 1 THEN 1 ELSE 0 END) AS [LogFiles],
-    
-    -- Auto-growth settings (show the first data file's growth)
-    MAX(CASE 
-        WHEN mf.type = 0 AND mf.is_percent_growth = 1 
-        THEN CAST(mf.growth AS VARCHAR(10)) + '%'
-        WHEN mf.type = 0 AND mf.is_percent_growth = 0 
-        THEN CAST(mf.growth * 8 / 1024 AS VARCHAR(10)) + ' MB'
+    MAX(CASE
+        WHEN mf.type = 0 AND mf.is_percent_growth = 1 THEN CONVERT(VARCHAR(20), mf.growth) + '%'
+        WHEN mf.type = 0 THEN CONVERT(VARCHAR(20), mf.growth * 8 / 1024) + ' MB'
     END) AS [DataGrowth],
-    
-    MAX(CASE 
-        WHEN mf.type = 1 AND mf.is_percent_growth = 1 
-        THEN CAST(mf.growth AS VARCHAR(10)) + '%'
-        WHEN mf.type = 1 AND mf.is_percent_growth = 0 
-        THEN CAST(mf.growth * 8 / 1024 AS VARCHAR(10)) + ' MB'
+    MAX(CASE
+        WHEN mf.type = 1 AND mf.is_percent_growth = 1 THEN CONVERT(VARCHAR(20), mf.growth) + '%'
+        WHEN mf.type = 1 THEN CONVERT(VARCHAR(20), mf.growth * 8 / 1024) + ' MB'
     END) AS [LogGrowth],
-    
     d.create_date AS [Created]
-
-FROM sys.databases d
-JOIN sys.master_files mf ON d.database_id = mf.database_id
+FROM sys.databases AS d
+JOIN sys.master_files AS mf ON d.database_id = mf.database_id
 GROUP BY d.name, d.state_desc, d.recovery_model_desc, d.create_date
 ORDER BY SUM(mf.size) DESC;

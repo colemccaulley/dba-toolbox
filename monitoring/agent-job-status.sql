@@ -1,11 +1,11 @@
 /*
-    SQL Agent Job Status
-    --------------------
-    Overview of all agent jobs, their last run status, schedule, and duration.
-    Great for getting a handle on a new environment.
-    
+    Script: agent-job-status.sql
+    Purpose: Review SQL Agent job enablement, recent status, duration, schedule, owner, and failure message.
     Compatible: SQL Server 2016+
-    Impact: Read-only, safe to run in production
+    Requires: msdb read access; SQLAgentReaderRole recommended
+    Impact: Read-only
+    Scope: Instance
+    Safety: ReadOnly
 */
 
 -- ============================================

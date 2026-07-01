@@ -1,11 +1,11 @@
 /*
-    Permission Audit
-    ----------------
-    Comprehensive report of who has access to what.
-    Run this periodically or when onboarding to a new environment.
-    
-    Compatible: SQL Server 2016+
-    Impact: Read-only, safe to run in production
+    Script: permission-audit.sql
+    Purpose: Audit server roles, sysadmin membership, current-database role membership, explicit permissions, and orphaned users.
+    Compatible: SQL Server 2017+ (uses STRING_AGG)
+    Requires: VIEW ANY DEFINITION recommended; securityadmin/sysadmin gives most complete output
+    Impact: Read-only
+    Scope: Instance and current database
+    Safety: ReadOnly
 */
 
 -- ============================================

@@ -24,13 +24,15 @@ Install-Module SqlServer -Scope CurrentUser
 
 | Folder | Description |
 |--------|-------------|
-| `health-checks/` | Server/database health, disk space, tempdb, database options |
-| `index-maintenance/` | Fragmentation analysis and reviewable maintenance command generation |
-| `performance/` | Wait stats, blocking analysis, plan cache, Query Store reviews |
-| `security/` | Login audits, permission reports, orphaned users |
-| `backup-restore/` | Backup health and restore-readiness reporting |
-| `monitoring/` | SQL Agent job status, scheduling, and failure visibility |
-| `migration/` | Placeholder for migration pre/post checks and schema/data validation |
+| `health-checks/` | Server/database health, disk space, tempdb, DBCC CHECKDB status |
+| `index-maintenance/` | Fragmentation, unused indexes, statistics health, reviewable command generation |
+| `performance/` | Wait stats, blocking analysis, plan cache, Query Store, missing indexes |
+| `security/` | Login audits, permission reports, orphaned users, failed-login analysis |
+| `backup-restore/` | Backup health reporting and point-in-time restore command generation |
+| `monitoring/` | SQL Agent jobs, long-running requests, deadlock capture |
+| `migration/` | Pre-migration inventory and post-migration source/target validation |
+| `ha-dr/` | Always On Availability Group health and RPO/RTO exposure |
+| `capacity-planning/` | Growth trending and space projection from backup history |
 | `templates/` | Safe starter templates for common DBA tasks |
 | `powershell/` | PowerShell wrappers for repeatable operational workflows |
 | `runbooks/` | Operator-facing procedures that tie scripts together |
@@ -61,7 +63,8 @@ Safety levels:
 ## Prerequisites
 
 - SQL Server 2016+ for most scripts.
-- `security/permission-audit.sql` requires SQL Server 2017+ because it uses `STRING_AGG`.
+- `security/permission-audit.sql` and `backup-restore/restore-command-generator.sql` require SQL Server 2017+ because they use `STRING_AGG`.
+- `health-checks/dbcc-checkdb-status.sql` requires SQL Server 2016 SP2+ (`LastGoodCheckDbTime`).
 - PowerShell 5.1+ or PowerShell 7+ for PowerShell wrappers.
 - `SqlServer` PowerShell module for `powershell/Invoke-DbaToolboxAssessment.ps1`.
 
@@ -82,6 +85,8 @@ Start with:
 
 - `runbooks/day-one-instance-review.md`
 - `runbooks/blocking-incident-response.md`
+- `runbooks/performance-triage.md`
+- `runbooks/point-in-time-restore.md`
 
 ## Contributing
 

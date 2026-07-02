@@ -25,6 +25,14 @@ REQUIRED_ASSETS = [
     ".gitignore",
     "docs/script-catalog.md",
     "runbooks/day-one-instance-review.md",
+    "runbooks/point-in-time-restore.md",
+    "runbooks/performance-triage.md",
+    "runbooks/README.md",
+    "runbooks/corruption-response.md",
+    "runbooks/disk-space-emergency.md",
+    "runbooks/backup-failure-triage.md",
+    "runbooks/ag-failover-response.md",
+    "runbooks/migration-cutover.md",
 ]
 
 
@@ -55,6 +63,15 @@ def main() -> int:
 
     if header_failures:
         fail(f"SQL scripts missing metadata headers: {header_failures}")
+
+    catalog = (ROOT / "docs" / "script-catalog.md").read_text(encoding="utf-8")
+    uncatalogued = [
+        str(path.relative_to(ROOT))
+        for path in SQL_FILES
+        if f"`{path.relative_to(ROOT)}`" not in catalog
+    ]
+    if uncatalogued:
+        fail(f"SQL scripts missing from docs/script-catalog.md: {uncatalogued}")
 
     print(f"OK: validated {len(SQL_FILES)} SQL scripts and repository assets")
     return 0

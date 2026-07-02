@@ -19,18 +19,31 @@ Look for:
 - AUTO_SHRINK or AUTO_CLOSE
 - tempdb file-count or growth red flags
 
-## 2. Validate recoverability
+## 2. Validate recoverability and integrity
 
 Run:
 
 ```sql
 :r backup-restore/backup-status-report.sql
+:r health-checks/dbcc-checkdb-status.sql
 ```
 
 Look for:
 - Databases never backed up
 - FULL recovery databases without recent log backups
 - Read-only or AG secondary databases that need context-specific interpretation
+- Databases never checked by DBCC CHECKDB, or overdue — corruption that predates your retained backups is unrecoverable, so this is as important as the backups themselves
+
+If the instance participates in an Availability Group (`AlwaysOnEnabled = 1` in the health check):
+
+```sql
+:r ha-dr/availability-group-health.sql
+```
+
+Look for:
+- Replicas not connected or not healthy
+- Suspended data movement (`SuspendReason` populated)
+- Large send/redo queues — quantify the current RPO/RTO exposure
 
 ## 3. Check active pain
 
@@ -59,7 +72,19 @@ Look for:
 - Orphaned users
 - Broad explicit object permissions
 
-## 5. Document findings
+## 5. Look ahead
+
+Run:
+
+```sql
+:r capacity-planning/database-growth-trend.sql
+```
+
+Look for:
+- Databases whose projected size outgrows their volume within the review horizon
+- Growth rates that don't match what the service owner expects (runaway logging/audit tables)
+
+## 6. Document findings
 
 Create a short report with:
 - Critical risks

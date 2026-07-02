@@ -50,6 +50,15 @@ class RepoConventionTests(unittest.TestCase):
                     offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual([], offenders)
 
+    def test_script_catalog_lists_every_sql_script(self):
+        catalog = read(ROOT / "docs" / "script-catalog.md")
+        missing = [
+            str(path.relative_to(ROOT))
+            for path in SQL_FILES
+            if f"`{path.relative_to(ROOT)}`" not in catalog
+        ]
+        self.assertEqual([], missing, "add new scripts to docs/script-catalog.md")
+
     def test_key_operational_assets_exist(self):
         expected = [
             ".editorconfig",
@@ -62,6 +71,19 @@ class RepoConventionTests(unittest.TestCase):
             "performance/query-store-top-duration.sql",
             "performance/wait-stats-delta-snapshot.sql",
             "health-checks/tempdb-configuration-check.sql",
+            "backup-restore/restore-command-generator.sql",
+            "health-checks/dbcc-checkdb-status.sql",
+            "ha-dr/availability-group-health.sql",
+            "migration/pre-migration-inventory.sql",
+            "migration/post-migration-validation.sql",
+            "runbooks/point-in-time-restore.md",
+            "runbooks/performance-triage.md",
+            "runbooks/README.md",
+            "runbooks/corruption-response.md",
+            "runbooks/disk-space-emergency.md",
+            "runbooks/backup-failure-triage.md",
+            "runbooks/ag-failover-response.md",
+            "runbooks/migration-cutover.md",
         ]
         missing = [path for path in expected if not (ROOT / path).exists()]
         self.assertEqual([], missing)

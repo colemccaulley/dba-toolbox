@@ -81,12 +81,17 @@ GitHub Actions runs the same checks on push and pull requests.
 
 ## Runbooks
 
-Start with:
+See `runbooks/README.md` for the symptom-to-runbook index. Coverage:
 
-- `runbooks/day-one-instance-review.md`
-- `runbooks/blocking-incident-response.md`
-- `runbooks/performance-triage.md`
-- `runbooks/point-in-time-restore.md`
+- `day-one-instance-review.md` — baseline a new or inherited instance
+- `performance-triage.md` — top-down "the database is slow" diagnosis
+- `blocking-incident-response.md` — lock contention, head blockers, safe kills
+- `point-in-time-restore.md` — recover a database to a specific moment
+- `corruption-response.md` — CHECKDB errors, suspect databases, I/O errors
+- `disk-space-emergency.md` — full log/tempdb/data drives
+- `backup-failure-triage.md` — failed backups and RPO exposure
+- `ag-failover-response.md` — planned and forced Availability Group failover
+- `migration-cutover.md` — move a database with rehearsal and validation
 
 ## Contributing
 

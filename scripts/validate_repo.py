@@ -27,6 +27,12 @@ REQUIRED_ASSETS = [
     "runbooks/day-one-instance-review.md",
     "runbooks/point-in-time-restore.md",
     "runbooks/performance-triage.md",
+    "runbooks/README.md",
+    "runbooks/corruption-response.md",
+    "runbooks/disk-space-emergency.md",
+    "runbooks/backup-failure-triage.md",
+    "runbooks/ag-failover-response.md",
+    "runbooks/migration-cutover.md",
 ]
 
 
